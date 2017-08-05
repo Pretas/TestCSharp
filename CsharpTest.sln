@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventTest", "EventTest\Even
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsFormsApplication1", "WindowsFormsApplication1\WindowsFormsApplication1.csproj", "{12CC5890-0979-474C-AA4C-5B6AAC9C1718}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Socket", "Socket\Socket.csproj", "{98EDFEC2-968D-44EE-A137-D5687242A44D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{12CC5890-0979-474C-AA4C-5B6AAC9C1718}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{12CC5890-0979-474C-AA4C-5B6AAC9C1718}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{12CC5890-0979-474C-AA4C-5B6AAC9C1718}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98EDFEC2-968D-44EE-A137-D5687242A44D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98EDFEC2-968D-44EE-A137-D5687242A44D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98EDFEC2-968D-44EE-A137-D5687242A44D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98EDFEC2-968D-44EE-A137-D5687242A44D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
