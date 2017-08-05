@@ -60,7 +60,7 @@ namespace CsharpTest
         {
             dynamic person = new DynamicDictionary();
 
-            person.FirstName = "Ellen";
+            person.FirstName = "Ellen";;
             person.LastName = "Adams";
             person.Sex = "Male";
 
