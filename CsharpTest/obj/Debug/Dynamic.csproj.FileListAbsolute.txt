@@ -1,0 +1,6 @@
+D:\Programming\CsharpTest\CsharpTest\bin\Debug\CsharpTest.exe.config
+D:\Programming\CsharpTest\CsharpTest\bin\Debug\CsharpTest.exe
+D:\Programming\CsharpTest\CsharpTest\bin\Debug\CsharpTest.pdb
+D:\Programming\CsharpTest\CsharpTest\obj\Debug\Dynamic.csprojResolveAssemblyReference.cache
+D:\Programming\CsharpTest\CsharpTest\obj\Debug\CsharpTest.exe
+D:\Programming\CsharpTest\CsharpTest\obj\Debug\CsharpTest.pdb

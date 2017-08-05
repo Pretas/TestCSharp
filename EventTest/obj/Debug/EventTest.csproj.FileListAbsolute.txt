@@ -1,0 +1,6 @@
+D:\Programming\CsharpTest\EventTest\bin\Debug\EventTest.exe.config
+D:\Programming\CsharpTest\EventTest\bin\Debug\EventTest.exe
+D:\Programming\CsharpTest\EventTest\bin\Debug\EventTest.pdb
+D:\Programming\CsharpTest\EventTest\obj\Debug\EventTest.csprojResolveAssemblyReference.cache
+D:\Programming\CsharpTest\EventTest\obj\Debug\EventTest.exe
+D:\Programming\CsharpTest\EventTest\obj\Debug\EventTest.pdb

@@ -1,0 +1,6 @@
+D:\Programming\CsharpTest\Generics\bin\Debug\Generics.exe.config
+D:\Programming\CsharpTest\Generics\bin\Debug\Generics.exe
+D:\Programming\CsharpTest\Generics\bin\Debug\Generics.pdb
+D:\Programming\CsharpTest\Generics\obj\Debug\Generics.csprojResolveAssemblyReference.cache
+D:\Programming\CsharpTest\Generics\obj\Debug\Generics.exe
+D:\Programming\CsharpTest\Generics\obj\Debug\Generics.pdb
