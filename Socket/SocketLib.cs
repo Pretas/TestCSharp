@@ -7,8 +7,13 @@ using System.Threading.Tasks;
 namespace Socket
 {
     public class SerializationTools
-    { }
-
+    {
+        public static void DeserializeObject()
+        {
+            return;
+        }
+    }
+    
     // Original source: https://blog.stephencleary.com/2009/04/sample-code-length-prefix-message.html
     /// <summary>
     /// Maintains the necessary buffers for applying a length-prefix message framing protocol over a stream.
