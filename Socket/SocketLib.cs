@@ -3,14 +3,46 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Net;
+using System.Net.Sockets;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.IO;
 
-namespace Socket
+namespace SocketNetwork
 {
+    public class SocketNetworkingTools
+    {
+        public static void Send(Socket toSocket, object data)
+        {
+            byte[] dataSend = 
+        }
+
+        public static void Receive(Socket fromSocket)
+        {
+            byte[] dataLengthByte = new byte[1024];
+            int a = fromSocket.Receive(dataLengthByte);
+            int dataLength = BitConverter.ToInt32(dataLengthByte, 0);
+            
+            byte[] resp = BitConverter.GetBytes(true);
+            fromSocket.Send(resp);
+
+            byte[] data = new byte[dataLength];
+            int a2 = fromSocket.Receive(data);
+
+        }
+    }
+
     public class SerializationTools
     {
-        public static void DeserializeObject()
-        {
+        public static void DeserializeObject(byte[] data)
+        {            
+            MemoryStream ms = new MemoryStream(data);
+            BinaryFormatter bf = new BinaryFormatter();
+            bf.Serialize(ms, data);
+
+
             return;
+
         }
     }
     
