@@ -1,0 +1,9 @@
+D:\Programming\CsharpTest\WindowsFormsApplication1\bin\Debug\WindowsFormsApplication1.exe.config
+D:\Programming\CsharpTest\WindowsFormsApplication1\bin\Debug\WindowsFormsApplication1.exe
+D:\Programming\CsharpTest\WindowsFormsApplication1\bin\Debug\WindowsFormsApplication1.pdb
+D:\Programming\CsharpTest\WindowsFormsApplication1\obj\Debug\WindowsFormsApplication1.csprojResolveAssemblyReference.cache
+D:\Programming\CsharpTest\WindowsFormsApplication1\obj\Debug\WindowsFormsApplication1.Form1.resources
+D:\Programming\CsharpTest\WindowsFormsApplication1\obj\Debug\WindowsFormsApplication1.Properties.Resources.resources
+D:\Programming\CsharpTest\WindowsFormsApplication1\obj\Debug\WindowsFormsApplication1.csproj.GenerateResource.Cache
+D:\Programming\CsharpTest\WindowsFormsApplication1\obj\Debug\WindowsFormsApplication1.exe
+D:\Programming\CsharpTest\WindowsFormsApplication1\obj\Debug\WindowsFormsApplication1.pdb

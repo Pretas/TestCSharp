@@ -30,7 +30,7 @@ namespace ConsoleTest
 
             //파일저장
             File.Delete(path);
-            using(Stream stream = File.Open(path, FileMode.Create, FileAccess.Write))
+            using (Stream stream = File.Open(path, FileMode.Create, FileAccess.Write))
             {
                 BinaryFormatter bformatter = new BinaryFormatter();
                 bformatter.Serialize(stream, sample);
@@ -42,7 +42,7 @@ namespace ConsoleTest
             {
                 BinaryFormatter bformatter = new BinaryFormatter();
                 res = (double[,])bformatter.Deserialize(stream);
-            }                      
+            }
 
             Console.ReadLine();
         }

@@ -1,0 +1,4 @@
+D:\Programming\CsharpTest\Socket\bin\Debug\Socket.dll
+D:\Programming\CsharpTest\Socket\bin\Debug\Socket.pdb
+D:\Programming\CsharpTest\Socket\obj\Debug\Socket.dll
+D:\Programming\CsharpTest\Socket\obj\Debug\Socket.pdb
