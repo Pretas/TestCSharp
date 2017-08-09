@@ -14,7 +14,6 @@ namespace SocketNetwork
     {
         public static void Send(Socket toSocket, object data)
         {
-            byte[] dataSend = 
         }
 
         public static void Receive(Socket fromSocket)
@@ -30,20 +29,65 @@ namespace SocketNetwork
             int a2 = fromSocket.Receive(data);
 
         }
+
+        public static void SendOnFileStream(Socket toSocket, string fileName)
+        {
+            FileStream stream = new FileStream(fileName, FileMode.Open, FileAccess.Read);
+
+            int fileLength = (int)stream.Length;
+            byte[] buffer = BitConverter.GetBytes(fileLength);
+            toSocket.Send(buffer);
+
+            byte[] resp = new byte[1024];
+            toSocket.Receive(resp);
+
+            BinaryReader br = new BinaryReader(stream);
+            byte[] data = br.ReadBytes(fileLength);
+            toSocket.Send(data);
+        }
+
+        public static void ReceiveOnFileStream(Socket fromSocket, string fileName)
+        {
+            byte[] fileLength = new byte[1024];
+            fromSocket.Receive(fileLength);
+            int dataLength = BitConverter.ToInt32(fileLength, 0);
+
+            byte[] resp = BitConverter.GetBytes(true);
+            fromSocket.Send(resp);
+            
+            FileStream stream = new FileStream(fileName, FileMode.Create, FileAccess.Write);
+            BinaryWriter w = new BinaryWriter(stream);
+            byte[] data = new byte[dataLength];
+            fromSocket.Receive(data);
+            w.Write(data, 0, dataLength);
+        }
     }
 
     public class SerializationTools
     {
-        public static void DeserializeObject(byte[] data)
-        {            
+        public static byte[] SerializeOnMemory(object data)
+        {
+            MemoryStream ms = new MemoryStream();
+            BinaryFormatter bf = new BinaryFormatter();
+            ms.Position = 0;
+            bf.Serialize(ms, data);
+            byte[] res = ms.ToArray();
+            ms.Dispose();
+
+            return res;
+        }
+
+        public static object DeserializeOnMemory(byte[] data)
+        {
             MemoryStream ms = new MemoryStream(data);
             BinaryFormatter bf = new BinaryFormatter();
-            bf.Serialize(ms, data);
+            ms.Position = 0;
+            bf.Deserialize(ms);
+            object res = ms.ToArray();
+            ms.Dispose();
 
-
-            return;
-
-        }
+            return res;
+        }        
     }
     
     // Original source: https://blog.stephencleary.com/2009/04/sample-code-length-prefix-message.html
