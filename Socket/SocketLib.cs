@@ -27,7 +27,38 @@ namespace SocketNetwork
 
             byte[] data = new byte[dataLength];
             int a2 = fromSocket.Receive(data);
+        }
 
+        public static void SendOnFileStreamOld(Socket toSocket, string fileName)
+        {
+            FileStream stream = new FileStream(fileName, FileMode.Open, FileAccess.Read);
+
+            int fileLength = (int)stream.Length;
+            byte[] buffer = BitConverter.GetBytes(fileLength);
+            toSocket.Send(buffer);
+
+            byte[] resp = new byte[1024];
+            toSocket.Receive(resp);
+
+            BinaryReader br = new BinaryReader(stream);
+            byte[] data = br.ReadBytes(fileLength);
+            toSocket.Send(data);
+        }
+
+        public static void ReceiveOnFileStreamOld(Socket fromSocket, string fileName)
+        {
+            byte[] fileLength = new byte[1024];
+            fromSocket.Receive(fileLength);
+            int dataLength = BitConverter.ToInt32(fileLength, 0);
+
+            byte[] resp = BitConverter.GetBytes(true);
+            fromSocket.Send(resp);
+            
+            FileStream stream = new FileStream(fileName, FileMode.Create, FileAccess.Write);
+            BinaryWriter w = new BinaryWriter(stream);
+            byte[] data = new byte[dataLength];
+            fromSocket.Receive(data);
+            w.Write(data, 0, dataLength);
         }
 
         public static void SendOnFileStream(Socket toSocket, string fileName)
@@ -54,7 +85,7 @@ namespace SocketNetwork
 
             byte[] resp = BitConverter.GetBytes(true);
             fromSocket.Send(resp);
-            
+
             FileStream stream = new FileStream(fileName, FileMode.Create, FileAccess.Write);
             BinaryWriter w = new BinaryWriter(stream);
             byte[] data = new byte[dataLength];

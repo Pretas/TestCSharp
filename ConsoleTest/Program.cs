@@ -38,11 +38,20 @@ namespace ConsoleTest
 
             //파일열기
             double[,] res;
+            byte[] res2;
             using (Stream stream = File.Open(path, FileMode.Open, FileAccess.Read))
             {
                 BinaryFormatter bformatter = new BinaryFormatter();
-                res = (double[,])bformatter.Deserialize(stream);
+                res2 = (byte[])bformatter.Deserialize(stream);
+                //res = (double[,])bformatter.Deserialize(stream);                
             }
+
+            long sum = 0;
+            for (int i = 0; i < res2.GetLength(0); i++)
+            {
+                sum += res2[i];
+            }
+
 
             Console.ReadLine();
         }
