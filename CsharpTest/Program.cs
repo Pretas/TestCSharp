@@ -52,8 +52,7 @@ namespace CsharpTest
             return true;
         }
     }
-
-
+    
     class Program
     {
         static void Main(string[] args)

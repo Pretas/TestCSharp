@@ -7,7 +7,7 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
 namespace ConsoleTest
-{
+{    
     class Program
     {
         static void Main(string[] args)
