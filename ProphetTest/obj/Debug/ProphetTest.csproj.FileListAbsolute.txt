@@ -1,0 +1,7 @@
+D:\Repositories\TestCSharp\ProphetTest\bin\Debug\ProphetTest.exe.config
+D:\Repositories\TestCSharp\ProphetTest\bin\Debug\ProphetTest.exe
+D:\Repositories\TestCSharp\ProphetTest\bin\Debug\ProphetTest.pdb
+D:\Repositories\TestCSharp\ProphetTest\obj\Debug\ProphetTest.csprojResolveAssemblyReference.cache
+D:\Repositories\TestCSharp\ProphetTest\obj\Debug\ProphetTest.csproj.CoreCompileInputs.cache
+D:\Repositories\TestCSharp\ProphetTest\obj\Debug\ProphetTest.exe
+D:\Repositories\TestCSharp\ProphetTest\obj\Debug\ProphetTest.pdb
