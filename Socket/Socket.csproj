@@ -40,9 +40,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommMultiClient.cs" />
     <Compile Include="LengthPrefix.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SendReceive.cs" />
     <Compile Include="SocketLib.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Tools\Tools.csproj">
+      <Project>{f652478d-dd48-4740-9b67-b4606e49df03}</Project>
+      <Name>Tools</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

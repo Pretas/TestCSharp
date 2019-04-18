@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using System.Threading;
 
 namespace SocketLib
 {
@@ -50,4 +51,86 @@ namespace SocketLib
         }
     }
 
+
+    public class ServerTest
+    {
+        public Socket ServerSocket { get; set; }
+        public List<Socket> ClientSockets { get; set; }
+        int Port { get; set; }
+        int ClientCnt { get; set; }
+        byte[] Buffer { get; set; }
+
+        public void SetupServer(int port, int clientCnt)
+        {
+            this.Port = port;
+            this.ClientCnt = clientCnt;
+
+            ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            IPHostEntry ipEntry = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress[] addr = ipEntry.AddressList;
+
+            IPEndPoint ep = new IPEndPoint(addr[1], 100);
+            ServerSocket.Bind(ep);
+            ServerSocket.Listen(10);
+
+            ClientSockets = new List<Socket>();
+
+            for (int i = 0; i < ClientCnt; i++)
+            {
+                Socket sock = ServerSocket.Accept();
+                ClientSockets.Add(sock);
+            }
+
+            Console.WriteLine("Server Connection Finished");
+        }
+
+        public void CloseAllSockets()
+        {
+            foreach (var sock in ClientSockets)
+            {
+                sock.Shutdown(SocketShutdown.Both);
+                sock.Close();
+            }
+        }
+    }
+
+    public class Client
+    {
+        public IPAddress ServerIP { get; private set; }
+        public int Port { get; private set; }
+        public Socket ClientSocket { get; private set; }
+
+        public Client(string ip, int port)
+        {
+            ServerIP = IPAddress.Parse(ip);
+            Port = port;
+        }
+
+        public void ConnectToServer()
+        {
+            ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            int tryCnt = 0;
+
+            while (!ClientSocket.Connected)
+            {
+                tryCnt++;
+
+                Thread.Sleep(1000);
+                IPEndPoint ep = new IPEndPoint(ServerIP, Port);
+                ClientSocket.Connect(ep);
+                
+                if (tryCnt == 20) throw new Exception(string.Format("faild to connect to server {0}", ServerIP.ToString()));
+            }
+
+            Console.WriteLine("connection");
+        }
+
+        public void Exit()
+        {
+            ClientSocket.Shutdown(SocketShutdown.Both);
+            ClientSocket.Close();
+        }
+    }    
 }
