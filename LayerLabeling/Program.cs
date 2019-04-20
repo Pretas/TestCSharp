@@ -30,13 +30,6 @@ namespace LayerLabeling
             }
         }
 
-        public LabelingTable()
-        {
-
-                
-        }
-
-
 
     }
 }

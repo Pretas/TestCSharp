@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace SocketLib
 {
-    public class Server
+    public class ServerAsync
     {
         public Socket ServerSocket { get; set; }
         List<Socket> ClientSockets { get; set; }
@@ -50,9 +50,8 @@ namespace SocketLib
             sock.BeginReceive(Buffer, 0, 100, SocketFlags.None, new AsyncCallback(ReceiveCallback), null);
         }
     }
-
-
-    public class ServerTest
+    
+    public class Server
     {
         public Socket ServerSocket { get; set; }
         public List<Socket> ClientSockets { get; set; }
