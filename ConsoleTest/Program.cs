@@ -8,13 +8,14 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Net;
 using System.Threading;
 using System.Net.Sockets;
+using System.IO.MemoryMappedFiles;
 
 namespace ConsoleTest
 {    
     class Program
     {
         static void Main(string[] args)
-        {
+        {   
             TCPTestBuffers();
             //MultiClientsTest();
 
@@ -22,7 +23,7 @@ namespace ConsoleTest
 
             Console.ReadLine();
         }
-
+        
         private static void TCPTestBuffers()
         {
             IPHostEntry ipEntry = Dns.GetHostEntry(Dns.GetHostName());
@@ -39,14 +40,22 @@ namespace ConsoleTest
                 SocketLib.Server sv = new SocketLib.Server();
                 sv.SetupServer(100, clCnt);
 
-                List<string> recvM = new List<string>();
-
                 Action<object> ac = x =>
                 {
                     Socket sock = (Socket)x;
 
-                    List<string> recv = SocketTools.SendReceive.ReceiveByBuffer<List<string>>(sock);
-                    recvM.AddRange(recv);
+                    if(false)
+                    {
+                        MemoryMappedFile mmf = Tools.MemoryMappedFileUtil.SaveMMF("testFile", sock);
+
+                        //List<string> recv = Tools.MemoryMappedFileUtil.LoadMMF<List<string>>("testFile");
+                    }
+                    else
+                    {
+                        List<string> recv = Tools.SendReceive.ReceiveByBuffer<List<string>>(sock);
+                    }
+                    
+                    long mem = GC.GetTotalMemory(true)/1000000;
                 };
 
                 Task[] tasks = new Task[clCnt];
@@ -72,11 +81,12 @@ namespace ConsoleTest
 
                 List<string> dt = new List<string>();
 
-                //dt.Add("aasdfasdfjlkjasldkgjlaksjdlfkajsdlkfj");
                 for (int i = 0; i < 1000000; i++)
-                    dt.Add(string.Format(@"{0}_{1}", role, i.ToString()));
+                {   
+                    dt.Add(string.Format(@"{0}_{1}", role, string.Format("{0:D12}", i)));
+                }
 
-                SocketTools.SendReceive.SendByBuffer(cl.ClientSocket, 1000000, dt);
+                Tools.SendReceive.SendByBuffer(cl.ClientSocket, 1000000, dt);
 
                 cl.Exit();
 
@@ -110,7 +120,7 @@ namespace ConsoleTest
 
                     for (int i = 0; i < loopNo; i++)
                     {
-                        string recv = SocketTools.SendReceive.Receive<string>(sock);
+                        string recv = Tools.SendReceive.Receive<string>(sock);
                         recvM.Add(recv);
                     }
                 };
@@ -139,7 +149,7 @@ namespace ConsoleTest
                 for (int i = 0; i < loopNo; i++)
                 {
                     string msg = string.Format(@"{0}_{1}", role, i);
-                    SocketTools.SendReceive.Send<string>(cl.ClientSocket, msg);
+                    Tools.SendReceive.Send<string>(cl.ClientSocket, msg);
                 }
 
                 cl.Exit();

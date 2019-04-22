@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.IO;
-using Tools;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
-namespace SocketTools
+namespace Tools
 {
     public class SocketNetworkingTools
     {
@@ -38,7 +36,7 @@ namespace SocketTools
 
             byte[] resp = BitConverter.GetBytes(true);
             fromSocket.Send(resp);
-            
+
             FileStream stream = new FileStream(fileName, FileMode.Create, FileAccess.Write);
             BinaryWriter w = new BinaryWriter(stream);
             byte[] data = new byte[dataLength];
@@ -91,12 +89,12 @@ namespace SocketTools
         {
             byte[] dataByte = SerializationUtil.SerializeToByte(obj);
 
-            send(clientSock, SerializationUtil.SerializeToByte(dataByte.Length));
+            send(clientSock, SerializationUtil.SerializeToByte((long)dataByte.Length));
 
             int unit = byteCntBySending; // 1mb씩 보내기
 
-            int bunchCnt = dataByte.Length/unit + (dataByte.Length % unit > 1 ? 1 : 0);
-                        
+            int bunchCnt = dataByte.Length / unit + (dataByte.Length % unit > 1 ? 1 : 0);
+
             send(clientSock, SerializationUtil.SerializeToByte(bunchCnt));
 
             int now = 0;
@@ -109,9 +107,7 @@ namespace SocketTools
                 Array.Copy(dataByte, now, sub, 0, byteCnt);
                 now += byteCnt;
 
-                //send(clientSock, SerializationUtil.SerializeToByte(byteCnt));
                 send(clientSock, sub);
-                //clientSock.Send(sub);
             }
         }
 
@@ -157,9 +153,9 @@ namespace SocketTools
         public static T Receive<T>(Socket clientSock)
         {
             byte[] dataByte = Receive(clientSock);
-            
+
             if (dataByte != null)
-            {                
+            {
                 return (T)SerializationUtil.DeserializeToObject(dataByte);
             }
             else
@@ -170,7 +166,7 @@ namespace SocketTools
 
         public static T ReceiveByBuffer<T>(Socket clientSock)
         {
-            int byteCnt = Receive<int>(clientSock);
+            long byteCnt = Receive<long>(clientSock);
             int bunchCnt = Receive<int>(clientSock);
 
             List<byte> total = new List<byte>();
@@ -184,23 +180,7 @@ namespace SocketTools
             return (T)SerializationUtil.DeserializeToObject(total.ToArray());
         }
 
-        public static T ReceiveByBufferOnMMF<T>(Socket clientSock)
-        {
-            int byteCnt = Receive<int>(clientSock);
-            int bunchCnt = Receive<int>(clientSock);
-
-            List<byte> total = new List<byte>();
-
-            for (int i = 0; i < bunchCnt; i++)
-            {
-                byte[] received = Receive(clientSock);
-                total.AddRange(received.ToList());
-            }
-
-            return (T)SerializationUtil.DeserializeToObject(total.ToArray());
-        }
-
-        protected static byte[] Receive(Socket clientSock)
+        public static byte[] Receive(Socket clientSock)
         {
             // 객체의 바이트수 수신
             byte[] dlb = GetBytesFromStream(clientSock, 4);
@@ -303,6 +283,128 @@ namespace SocketTools
         {
             // (5) 소켓 닫기
             sock.Close();
+        }
+    }
+
+    public class ServerAsync
+    {
+        public Socket ServerSocket { get; set; }
+        List<Socket> ClientSockets { get; set; }
+        int Port { get; set; }
+        byte[] Buffer { get; set; }
+
+        public void SetupServer()
+        {
+            ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            IPEndPoint ep = new IPEndPoint(IPAddress.Any, 100);
+            ServerSocket.Bind(ep);
+            ServerSocket.Listen(10);
+            ServerSocket.BeginAccept(new AsyncCallback(AcceptCallback), null);
+        }
+
+        public void CloseAllSockets()
+        {
+            foreach (var sock in ClientSockets)
+            {
+                sock.Shutdown(SocketShutdown.Both);
+                sock.Close();
+            }
+        }
+
+        private void AcceptCallback(IAsyncResult ar)
+        {
+            Socket sock = ServerSocket.EndAccept(ar);
+            ClientSockets.Add(sock);
+            sock.BeginReceive(Buffer, 0, 100, SocketFlags.None, new AsyncCallback(ReceiveCallback), null);
+        }
+
+        private void ReceiveCallback(IAsyncResult ar)
+        {
+            Socket sock = (Socket)ar.AsyncState;
+            int recv = sock.EndReceive(ar);
+            sock.BeginReceive(Buffer, 0, 100, SocketFlags.None, new AsyncCallback(ReceiveCallback), null);
+        }
+    }
+
+    public class Server
+    {
+        public Socket ServerSocket { get; set; }
+        public List<Socket> ClientSockets { get; set; }
+        int Port { get; set; }
+        int ClientCnt { get; set; }
+        byte[] Buffer { get; set; }
+
+        public void SetupServer(int port, int clientCnt)
+        {
+            this.Port = port;
+            this.ClientCnt = clientCnt;
+
+            ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            IPHostEntry ipEntry = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress[] addr = ipEntry.AddressList;
+
+            IPEndPoint ep = new IPEndPoint(addr[1], 100);
+            ServerSocket.Bind(ep);
+            ServerSocket.Listen(10);
+
+            ClientSockets = new List<Socket>();
+
+            for (int i = 0; i < ClientCnt; i++)
+            {
+                Socket sock = ServerSocket.Accept();
+                ClientSockets.Add(sock);
+            }
+
+            Console.WriteLine("Server Connection Finished");
+        }
+
+        public void CloseAllSockets()
+        {
+            foreach (var sock in ClientSockets)
+            {
+                sock.Shutdown(SocketShutdown.Both);
+                sock.Close();
+            }
+        }
+    }
+
+    public class Client
+    {
+        public IPAddress ServerIP { get; private set; }
+        public int Port { get; private set; }
+        public Socket ClientSocket { get; private set; }
+
+        public Client(string ip, int port)
+        {
+            ServerIP = IPAddress.Parse(ip);
+            Port = port;
+        }
+
+        public void ConnectToServer()
+        {
+            ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            int tryCnt = 0;
+
+            while (!ClientSocket.Connected)
+            {
+                tryCnt++;
+
+                Thread.Sleep(1000);
+                IPEndPoint ep = new IPEndPoint(ServerIP, Port);
+                ClientSocket.Connect(ep);
+
+                if (tryCnt == 20) throw new Exception(string.Format("faild to connect to server {0}", ServerIP.ToString()));
+            }
+
+            Console.WriteLine("connection");
+        }
+
+        public void Exit()
+        {
+            ClientSocket.Shutdown(SocketShutdown.Both);
+            ClientSocket.Close();
         }
     }
 }
