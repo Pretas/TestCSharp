@@ -286,6 +286,44 @@ namespace Tools
         }
     }
 
+    public class ServerWithMultiClients
+    {
+        public Socket ServerSocket { get; private set; }
+        public List<Socket> ClientSockets { get; private set; }
+        int Port { get; set; }
+        byte[] Buffer { get; set; }
+
+        public void SetupServer(int clientsCnt)
+        {
+            ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            IPHostEntry ipEntry = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress[] addr = ipEntry.AddressList;
+
+            IPEndPoint ep = new IPEndPoint(addr[1], 100);
+            ServerSocket.Bind(ep);
+            ServerSocket.Listen(100);
+
+            ClientSockets = new List<Socket>();
+
+            for (int i = 0; i < clientsCnt; i++)
+            {
+                var cSocket = ServerSocket.Accept();
+                ClientSockets.Add(cSocket);
+                Console.WriteLine("client no. " + i + " was accepted.");
+            }
+        }
+
+        public void CloseAllSockets()
+        {
+            foreach (var sock in ClientSockets)
+            {
+                sock.Shutdown(SocketShutdown.Both);
+                sock.Close();
+            }
+        }
+    }
+
     public class ServerAsync
     {
         public Socket ServerSocket { get; set; }
@@ -298,7 +336,7 @@ namespace Tools
             ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             IPEndPoint ep = new IPEndPoint(IPAddress.Any, 100);
             ServerSocket.Bind(ep);
-            ServerSocket.Listen(10);
+            ServerSocket.Listen(100);
             ServerSocket.BeginAccept(new AsyncCallback(AcceptCallback), null);
         }
 
@@ -406,5 +444,149 @@ namespace Tools
             ClientSocket.Shutdown(SocketShutdown.Both);
             ClientSocket.Close();
         }
+    }
+
+    public class TestClass
+    {
+        public static void MultiClientsTest()
+        {
+            IPHostEntry ipEntry = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress[] addr = ipEntry.AddressList;
+            Console.WriteLine("enter your role(s, 1,2,3...)");
+            string role = Console.ReadLine();
+
+            int loopNo = 1000;
+
+            if (role == @"s")
+            {
+                int clCnt = 3;
+
+                Tools.ServerWithMultiClients sv = new Tools.ServerWithMultiClients();
+                sv.SetupServer(clCnt);
+                List<string>[] recvM = new List<string>[clCnt];
+
+                Action<object> ac = x =>
+                {
+                    Socket sock = ((Tuple<Socket, int>)x).Item1;
+                    int clNo = ((Tuple<Socket, int>)x).Item2;
+
+                    recvM[clNo] = new List<string>();
+
+                    for (int i = 0; i < loopNo; i++)
+                    {
+                        string recv = Tools.SendReceive.Receive<string>(sock);
+                        recvM[clNo].Add(recv);
+                    }
+                };
+
+                Task[] tasks = new Task[clCnt];
+
+                for (int i = 0; i < clCnt; i++)
+                {
+                    tasks[i] = new Task(ac, Tuple.Create(sv.ClientSockets[i], i));
+                    tasks[i].Start();
+                }
+
+                for (int i = 0; i < clCnt; i++)
+                {
+                    tasks[i].Wait();
+                }
+
+                Console.WriteLine("server finished");
+                Console.ReadKey();
+            }
+            else
+            {
+                Tools.Client cl = new Tools.Client(addr[1].ToString(), 100);
+                cl.ConnectToServer();
+
+                for (int i = 0; i < loopNo; i++)
+                {
+                    string msg = string.Format(@"{0}_{1}", role, i);
+                    Tools.SendReceive.Send<string>(cl.ClientSocket, msg);
+                    Thread.Sleep(10 + Convert.ToInt32(role));
+                }
+
+                cl.Exit();
+
+                Console.WriteLine("client finished");
+                Console.ReadKey();
+            }
+
+        }
+
+        // 여러 클라이언트로부터 동시에 데이터를 버퍼로 받으면서 바로 하드에 저장
+        // 메모리 문제를 해결하기 위함
+        public static void TCPTestBuffers()
+        {
+            IPHostEntry ipEntry = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress[] addr = ipEntry.AddressList;
+            Console.WriteLine("enter your role(s, 1,2,3...)");
+            string role = Console.ReadLine();
+            
+            if (role == @"s")
+            {
+                int clCnt = 3;
+
+                Tools.ServerWithMultiClients sv = new Tools.ServerWithMultiClients();
+                sv.SetupServer(clCnt);
+                List<string>[] recvM = new List<string>[clCnt];
+
+                Action<object> ac = x =>
+                {
+                    Socket sock = ((Tuple<Socket, int>)x).Item1;
+                    int clNo = ((Tuple<Socket, int>)x).Item2;
+                                        
+                    if (false)
+                    {
+                        //MemoryMappedFile mmf = Tools.MemoryMappedFileUtil.SaveMMF("testFile", sock);
+
+                        //List<string> recv = Tools.MemoryMappedFileUtil.LoadMMF<List<string>>("testFile");
+                    }
+                    else
+                    {
+                        List<string> recv = Tools.SendReceive.ReceiveByBuffer<List<string>>(sock);
+                    }
+
+                    long mem = GC.GetTotalMemory(true) / 1000000;
+                };
+
+                Task[] tasks = new Task[clCnt];
+
+                for (int i = 0; i < clCnt; i++)
+                {
+                    tasks[i] = new Task(ac, Tuple.Create(sv.ClientSockets[i], i));
+                    tasks[i].Start();
+                }
+
+                for (int i = 0; i < clCnt; i++)
+                {
+                    tasks[i].Wait();
+                }
+
+                Console.WriteLine("server finished");
+                Console.ReadKey();
+            }
+            else
+            {
+                Tools.Client cl = new Tools.Client(addr[1].ToString(), 100);
+                cl.ConnectToServer();
+
+                List<string> dt = new List<string>();
+
+                for (int i = 0; i < 1000000; i++)
+                {
+                    dt.Add(string.Format(@"{0}_{1}", role, string.Format("{0:D12}", i)));
+                }
+
+                Tools.SendReceive.SendByBuffer(cl.ClientSocket, 1000000, dt);
+
+                cl.Exit();
+
+                Console.WriteLine("client finished");
+                Console.ReadKey();
+            }
+
+        }       
     }
 }

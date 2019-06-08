@@ -15,151 +15,15 @@ namespace ConsoleTest
     class Program
     {
         static void Main(string[] args)
-        {   
-            TCPTestBuffers();
-            //MultiClientsTest();
+        {
+            Tools.TestClass.MultiClientsTest();
+            Tools.TestClass.TCPTestBuffers();
 
             //Test();
 
             Console.ReadLine();
         }
         
-        private static void TCPTestBuffers()
-        {
-            IPHostEntry ipEntry = Dns.GetHostEntry(Dns.GetHostName());
-            IPAddress[] addr = ipEntry.AddressList;
-
-            string role = Console.ReadLine();
-
-            //int loopNo = 10000;
-
-            if (role == @"s")
-            {
-                int clCnt = 1;
-
-                SocketLib.Server sv = new SocketLib.Server();
-                sv.SetupServer(100, clCnt);
-
-                Action<object> ac = x =>
-                {
-                    Socket sock = (Socket)x;
-
-                    if(false)
-                    {
-                        MemoryMappedFile mmf = Tools.MemoryMappedFileUtil.SaveMMF("testFile", sock);
-
-                        //List<string> recv = Tools.MemoryMappedFileUtil.LoadMMF<List<string>>("testFile");
-                    }
-                    else
-                    {
-                        List<string> recv = Tools.SendReceive.ReceiveByBuffer<List<string>>(sock);
-                    }
-                    
-                    long mem = GC.GetTotalMemory(true)/1000000;
-                };
-
-                Task[] tasks = new Task[clCnt];
-
-                for (int i = 0; i < clCnt; i++)
-                {
-                    tasks[i] = new Task(ac, sv.ClientSockets[i]);
-                    tasks[i].Start();
-                }
-
-                for (int i = 0; i < clCnt; i++)
-                {
-                    tasks[i].Wait();
-                }
-
-                Console.WriteLine("server finished");
-                Console.ReadKey();
-            }
-            else
-            {
-                SocketLib.Client cl = new SocketLib.Client(addr[1].ToString(), 100);
-                cl.ConnectToServer();
-
-                List<string> dt = new List<string>();
-
-                for (int i = 0; i < 1000000; i++)
-                {   
-                    dt.Add(string.Format(@"{0}_{1}", role, string.Format("{0:D12}", i)));
-                }
-
-                Tools.SendReceive.SendByBuffer(cl.ClientSocket, 1000000, dt);
-
-                cl.Exit();
-
-                Console.WriteLine("client finished");
-                Console.ReadKey();
-            }
-
-        }
-
-        private static void MultiClientsTest()
-        {
-            IPHostEntry ipEntry = Dns.GetHostEntry(Dns.GetHostName());
-            IPAddress[] addr = ipEntry.AddressList;
-
-            string role = Console.ReadLine();
-
-            int loopNo = 10000;
-
-            if (role == @"s")
-            {
-                int clCnt = 3;
-
-                SocketLib.Server sv = new SocketLib.Server();
-                sv.SetupServer(100, clCnt);
-
-                List<string> recvM = new List<string>();
-
-                Action<object> ac = x =>
-                {
-                    Socket sock = (Socket)x;
-
-                    for (int i = 0; i < loopNo; i++)
-                    {
-                        string recv = Tools.SendReceive.Receive<string>(sock);
-                        recvM.Add(recv);
-                    }
-                };
-
-                Task[] tasks = new Task[clCnt];
-
-                for (int i = 0; i < clCnt; i++)
-                {
-                    tasks[i] = new Task(ac, sv.ClientSockets[i]);
-                    tasks[i].Start();
-                }
-
-                for (int i = 0; i < clCnt; i++)
-                {
-                    tasks[i].Wait();
-                }
-
-                Console.WriteLine("server finished");
-                Console.ReadKey();
-            }
-            else
-            {
-                SocketLib.Client cl = new SocketLib.Client(addr[1].ToString(), 100);
-                cl.ConnectToServer();
-
-                for (int i = 0; i < loopNo; i++)
-                {
-                    string msg = string.Format(@"{0}_{1}", role, i);
-                    Tools.SendReceive.Send<string>(cl.ClientSocket, msg);
-                }
-
-                cl.Exit();
-
-                Console.WriteLine("client finished");
-                Console.ReadKey();
-            }
-
-        }
-
         private static void Test()
         {
             int row = 100000;
