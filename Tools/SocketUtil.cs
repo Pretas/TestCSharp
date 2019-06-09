@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -87,26 +88,32 @@ namespace Tools
 
         public static void SendByBuffer<T>(Socket clientSock, int byteCntBySending, T obj)
         {
+            // serialize object
             byte[] dataByte = SerializationUtil.SerializeToByte(obj);
 
+            // send memory length
             send(clientSock, SerializationUtil.SerializeToByte((long)dataByte.Length));
 
-            int unit = byteCntBySending; // 1mb씩 보내기
+            // count the number of sending
+            int bunchCnt = dataByte.Length / byteCntBySending + (dataByte.Length % byteCntBySending > 1 ? 1 : 0);
 
-            int bunchCnt = dataByte.Length / unit + (dataByte.Length % unit > 1 ? 1 : 0);
-
+            // send the number of sending
             send(clientSock, SerializationUtil.SerializeToByte(bunchCnt));
 
             int now = 0;
 
+            // loop for sending N times
             for (int i = 0; i < bunchCnt; i++)
             {
+                // count the number of byte in one sending
                 int byteCnt = Math.Min(byteCntBySending, dataByte.Length - now);
 
+                // copy part of memory to send
                 byte[] sub = new byte[byteCnt];
                 Array.Copy(dataByte, now, sub, 0, byteCnt);
                 now += byteCnt;
 
+                // send
                 send(clientSock, sub);
             }
         }
@@ -179,7 +186,7 @@ namespace Tools
 
             return (T)SerializationUtil.DeserializeToObject(total.ToArray());
         }
-
+        
         public static byte[] Receive(Socket clientSock)
         {
             // 객체의 바이트수 수신
@@ -217,72 +224,6 @@ namespace Tools
             }
 
             return dataBytes;
-        }
-    }
-
-    public class ServerSocket
-    {
-        public Socket sock;
-        public Socket clientSock;
-
-        public ServerSocket(int port)
-        {
-            sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-            // (2) 포트에 바인드
-            IPEndPoint ep = new IPEndPoint(IPAddress.Any, port);
-            sock.Bind(ep);
-
-            // (3) 포트 Listening 시작
-            sock.Listen(10);
-
-            // (4) 연결을 받아들여 새 소켓 생성 (하나의 연결만 받아들임)
-            clientSock = sock.Accept();
-        }
-
-        public void Close()
-        {
-            // (7) 소켓 닫기
-            clientSock.Close();
-            sock.Close();
-        }
-    }
-
-    public class ClientSocket
-    {
-        public Socket sock;
-
-        public ClientSocket(string serverIP, int port)
-        {
-            // (1) 소켓 객체 생성 (TCP 소켓)
-            sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-            int tryCount = 20;
-            int tryCounter = 0;
-            while (tryCounter < tryCount)
-            {
-                try
-                {
-                    // (2) 서버에 연결
-                    IPEndPoint ep = new IPEndPoint(IPAddress.Parse(serverIP), port);
-                    sock.Connect(ep);
-                }
-                catch (SocketException e)
-                {
-                    Console.WriteLine(@"Client for {0}/{1} : {2}", serverIP, port.ToString(), e.Message);
-                    Thread.Sleep(10000);
-                }
-                finally
-                {
-                    tryCounter++;
-                }
-            }
-        }
-
-        public void Close()
-        {
-            // (5) 소켓 닫기
-            sock.Close();
         }
     }
 
@@ -364,7 +305,7 @@ namespace Tools
         }
     }
 
-    public class Server
+    public class ServerTCP
     {
         public Socket ServerSocket { get; set; }
         public List<Socket> ClientSockets { get; set; }
@@ -407,13 +348,13 @@ namespace Tools
         }
     }
 
-    public class Client
+    public class ClientTCP
     {
         public IPAddress ServerIP { get; private set; }
         public int Port { get; private set; }
         public Socket ClientSocket { get; private set; }
 
-        public Client(string ip, int port)
+        public ClientTCP(string ip, int port)
         {
             ServerIP = IPAddress.Parse(ip);
             Port = port;
@@ -497,7 +438,7 @@ namespace Tools
             }
             else
             {
-                Tools.Client cl = new Tools.Client(addr[1].ToString(), 100);
+                Tools.ClientTCP cl = new Tools.ClientTCP(addr[1].ToString(), 100);
                 cl.ConnectToServer();
 
                 for (int i = 0; i < loopNo; i++)
@@ -536,19 +477,14 @@ namespace Tools
                 {
                     Socket sock = ((Tuple<Socket, int>)x).Item1;
                     int clNo = ((Tuple<Socket, int>)x).Item2;
-                                        
-                    if (false)
-                    {
-                        //MemoryMappedFile mmf = Tools.MemoryMappedFileUtil.SaveMMF("testFile", sock);
 
-                        //List<string> recv = Tools.MemoryMappedFileUtil.LoadMMF<List<string>>("testFile");
-                    }
-                    else
-                    {
-                        List<string> recv = Tools.SendReceive.ReceiveByBuffer<List<string>>(sock);
-                    }
+                    MemoryMappedFile mmf = MemoryMappedFileUtil.SaveMMF(clNo.ToString(), sock);
+                    Console.WriteLine("received data from " + clNo);
+
+                    recvM[clNo] = MemoryMappedFileUtil.LoadMMF<List<string>>(clNo.ToString());
 
                     long mem = GC.GetTotalMemory(true) / 1000000;
+                    Console.WriteLine("total memory is " + mem);
                 };
 
                 Task[] tasks = new Task[clCnt];
@@ -569,7 +505,7 @@ namespace Tools
             }
             else
             {
-                Tools.Client cl = new Tools.Client(addr[1].ToString(), 100);
+                Tools.ClientTCP cl = new Tools.ClientTCP(addr[1].ToString(), 100);
                 cl.ConnectToServer();
 
                 List<string> dt = new List<string>();
@@ -586,7 +522,73 @@ namespace Tools
                 Console.WriteLine("client finished");
                 Console.ReadKey();
             }
-
         }       
     }
+    
+    //public class ServerSocket
+    //{
+    //    public Socket sock;
+    //    public Socket clientSock;
+
+    //    public ServerSocket(int port)
+    //    {
+    //        sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+    //        // (2) 포트에 바인드
+    //        IPEndPoint ep = new IPEndPoint(IPAddress.Any, port);
+    //        sock.Bind(ep);
+
+    //        // (3) 포트 Listening 시작
+    //        sock.Listen(10);
+
+    //        // (4) 연결을 받아들여 새 소켓 생성 (하나의 연결만 받아들임)
+    //        clientSock = sock.Accept();
+    //    }
+
+    //    public void Close()
+    //    {
+    //        // (7) 소켓 닫기
+    //        clientSock.Close();
+    //        sock.Close();
+    //    }
+    //}
+
+    //public class ClientSocket
+    //{
+    //    public Socket sock;
+
+    //    public ClientSocket(string serverIP, int port)
+    //    {
+    //        // (1) 소켓 객체 생성 (TCP 소켓)
+    //        sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+    //        int tryCount = 20;
+    //        int tryCounter = 0;
+    //        while (tryCounter < tryCount)
+    //        {
+    //            try
+    //            {
+    //                // (2) 서버에 연결
+    //                IPEndPoint ep = new IPEndPoint(IPAddress.Parse(serverIP), port);
+    //                sock.Connect(ep);
+    //            }
+    //            catch (SocketException e)
+    //            {
+    //                Console.WriteLine(@"Client for {0}/{1} : {2}", serverIP, port.ToString(), e.Message);
+    //                Thread.Sleep(10000);
+    //            }
+    //            finally
+    //            {
+    //                tryCounter++;
+    //            }
+    //        }
+    //    }
+
+    //    public void Close()
+    //    {
+    //        // (5) 소켓 닫기
+    //        sock.Close();
+    //    }
+    //}
+
 }
