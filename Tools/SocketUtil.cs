@@ -307,44 +307,34 @@ namespace Tools
 
     public class ServerTCP
     {
-        public Socket ServerSocket { get; set; }
-        public List<Socket> ClientSockets { get; set; }
-        int Port { get; set; }
-        int ClientCnt { get; set; }
-        byte[] Buffer { get; set; }
+        public Socket ServerSocket { get; private set; }
+        public int Port { get; private set; }
 
-        public void SetupServer(int port, int clientCnt)
+        public void SetupServer(int port)
         {
             this.Port = port;
-            this.ClientCnt = clientCnt;
 
             ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
             IPHostEntry ipEntry = Dns.GetHostEntry(Dns.GetHostName());
             IPAddress[] addr = ipEntry.AddressList;
 
-            IPEndPoint ep = new IPEndPoint(addr[1], 100);
+            IPEndPoint ep = new IPEndPoint(addr[1], port);
             ServerSocket.Bind(ep);
-            ServerSocket.Listen(10);
+            ServerSocket.Listen(100);
 
-            ClientSockets = new List<Socket>();
-
-            for (int i = 0; i < ClientCnt; i++)
-            {
-                Socket sock = ServerSocket.Accept();
-                ClientSockets.Add(sock);
-            }
-
-            Console.WriteLine("Server Connection Finished");
+            Console.WriteLine("Server {0}:{1} is listening", addr[1].ToString(), port);
         }
 
-        public void CloseAllSockets()
+        public void Close()
         {
-            foreach (var sock in ClientSockets)
-            {
-                sock.Shutdown(SocketShutdown.Both);
-                sock.Close();
-            }
+            ServerSocket.Shutdown(SocketShutdown.Both);
+            ServerSocket.Close();
+        }
+
+        public static Socket GetClientSocket(Socket serverSocket)
+        {
+            return serverSocket.Accept();
         }
     }
 
@@ -364,23 +354,27 @@ namespace Tools
         {
             ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-            int tryCnt = 0;
+            int tryCount = 20;
+            int tryCounter = 0;
 
-            while (!ClientSocket.Connected)
+            while (tryCounter < tryCount)
             {
-                tryCnt++;
+                try
+                {
+                    IPEndPoint ep = new IPEndPoint(ServerIP, Port);
+                    ClientSocket.Connect(ep);
+                }
+                catch (SocketException e)
+                {
+                    tryCounter++;
+                    Thread.Sleep(10000);
 
-                Thread.Sleep(1000);
-                IPEndPoint ep = new IPEndPoint(ServerIP, Port);
-                ClientSocket.Connect(ep);
-
-                if (tryCnt == 20) throw new Exception(string.Format("faild to connect to server {0}", ServerIP.ToString()));
-            }
-
-            Console.WriteLine("connection");
+                    if (tryCounter == tryCount) throw new Exception(string.Format(@"Failed to connect to {0}:{1}, {2}", ServerIP.ToString(), Port, e));
+                }
+            }            
         }
 
-        public void Exit()
+        public void Close()
         {
             ClientSocket.Shutdown(SocketShutdown.Both);
             ClientSocket.Close();
@@ -448,7 +442,7 @@ namespace Tools
                     Thread.Sleep(10 + Convert.ToInt32(role));
                 }
 
-                cl.Exit();
+                cl.Close();
 
                 Console.WriteLine("client finished");
                 Console.ReadKey();
@@ -517,7 +511,7 @@ namespace Tools
 
                 Tools.SendReceive.SendByBuffer(cl.ClientSocket, 1000000, dt);
 
-                cl.Exit();
+                cl.Close();
 
                 Console.WriteLine("client finished");
                 Console.ReadKey();

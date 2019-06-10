@@ -16,7 +16,7 @@ namespace ConsoleTest
     {
         static void Main(string[] args)
         {
-            Tools.TestClass.MultiClientsTest();
+            //Tools.TestClass.MultiClientsTest();
             Tools.TestClass.TCPTestBuffers();
 
             //Test();
