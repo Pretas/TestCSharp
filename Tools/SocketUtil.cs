@@ -363,6 +363,7 @@ namespace Tools
                 {
                     IPEndPoint ep = new IPEndPoint(ServerIP, Port);
                     ClientSocket.Connect(ep);
+                    return;
                 }
                 catch (SocketException e)
                 {
@@ -458,7 +459,7 @@ namespace Tools
             IPAddress[] addr = ipEntry.AddressList;
             Console.WriteLine("enter your role(s, 1,2,3...)");
             string role = Console.ReadLine();
-            
+
             if (role == @"s")
             {
                 int clCnt = 3;
@@ -516,9 +517,69 @@ namespace Tools
                 Console.WriteLine("client finished");
                 Console.ReadKey();
             }
-        }       
+        }
+
+        public static void DisconnectionTest()
+        {
+            IPHostEntry ipEntry = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress[] addr = ipEntry.AddressList;
+            Console.WriteLine("enter your role(s, 1,2,3...)");
+            string role = Console.ReadLine();
+
+            int portNo = 100;
+
+            if (role == @"s")
+            {
+                int clCnt = 2;
+
+                Tools.ServerTCP sv = new ServerTCP();
+                sv.SetupServer(portNo);
+                
+                Action<object> ac = x =>
+                {
+                    Socket sock = ((Tuple<Socket, int>)x).Item1;
+                    int clNo = ((Tuple<Socket, int>)x).Item2;
+
+                    Console.WriteLine("waits...");
+                    Console.ReadKey();
+
+                    SendReceive.Send<bool>(sock, true);                    
+                };
+
+                Task[] tasks = new Task[clCnt];
+
+                for (int i = 0; i < clCnt; i++)
+                {
+                    Socket clSock = Tools.ServerTCP.GetClientSocket(sv.ServerSocket);
+                    Console.WriteLine($"client no.{i} was accepted");
+                    tasks[i] = new Task(ac, Tuple.Create(clSock, i));
+                    tasks[i].Start();
+                }
+
+                for (int i = 0; i < clCnt; i++)
+                {
+                    tasks[i].Wait();
+                }
+
+                Console.WriteLine("server finished");
+                Console.ReadKey();
+            }
+            else
+            {
+                Tools.ClientTCP cl = new Tools.ClientTCP(addr[1].ToString(), portNo);
+                cl.ConnectToServer();
+                                
+                bool yn = Tools.SendReceive.Receive<bool>(cl.ClientSocket);
+
+                cl.Close();
+
+                Console.WriteLine("client finished");
+                Console.ReadKey();
+            }
+
+        }
     }
-    
+
     //public class ServerSocket
     //{
     //    public Socket sock;

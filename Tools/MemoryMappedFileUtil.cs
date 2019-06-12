@@ -5,38 +5,54 @@ using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Tools
 {
     public class MemoryMappedFileUtil
     {
-        public static MemoryMappedFile SaveMMF<T>(string name, bool isReuse, T obj)
+        public static MemoryMappedFile SaveMMF<T>(T obj, string fileName, bool isReuse)
         {
-            byte[] byteObj = SerializationUtil.SerializeToByte(obj);
+            MemoryMappedFile mmf;
 
             bool isExists = false;
 
-            try { var mmf = MemoryMappedFile.CreateNew(name, byteObj.Length); }
-            catch { isExists = true; }
-
-            if (!isReuse && isExists) throw new Exception(string.Format(@"MMF {0} is already exists", name));
-
             try
             {
-                var mmf = MemoryMappedFile.CreateNew(name, byteObj.Length);
+                using (var item = MemoryMappedFile.OpenExisting(fileName)) { }
 
-                using (var wt = mmf.CreateViewAccessor(0, byteObj.Length))
-                {
-                    int pos = 0;
-                    wt.WriteArray(pos, byteObj, 0, byteObj.Length);
-                }
+                isExists = true;
+
+                if (isReuse) mmf = MemoryMappedFile.OpenExisting(fileName);
+                else throw new Exception("There is file " + fileName + "already");
 
                 return mmf;
             }
             catch(Exception e)
             {
-                throw e;
+                if (!isReuse && isExists) throw e;
+                
+                try
+                {
+                    byte[] byteObj = SerializationUtil.SerializeToByte(obj);
+
+                    mmf = MemoryMappedFile.CreateNew(fileName, byteObj.Length);
+
+                    int lth = byteObj.Length;
+
+                    using (var wt = mmf.CreateViewAccessor(0, lth))
+                    {
+                        int pos = 0;
+                        wt.WriteArray(pos, byteObj, 0, lth);
+                    }
+
+                    return mmf;
+                }
+                catch (Exception e2)
+                {
+                    throw e2;
+                }
             }
         }
 
@@ -65,30 +81,41 @@ namespace Tools
             return mmf;            
         }
 
-        public static T LoadMMF<T>(string name)
+        public static T LoadMMF<T>(string fileName)
         {
             T res = default(T);
 
-            try
+            Thread t = new Thread(() =>
             {
-                using (var mmf = MemoryMappedFile.OpenExisting(name))
+                try
                 {
-                    using (var stream = mmf.CreateViewStream())
+                    using (var mmf = MemoryMappedFile.OpenExisting(fileName))
                     {
-                        using (BinaryReader br = new BinaryReader(stream))
+                        using (var stream = mmf.CreateViewStream())
                         {
-                            byte[] rt = br.ReadBytes((int)stream.Length);
-                            res = (T)SerializationUtil.DeserializeToObject(rt);
+                            using (BinaryReader br = new BinaryReader(stream))
+                            {
+                                byte[] rt = br.ReadBytes((int)stream.Length);
+                                res = (T)SerializationUtil.DeserializeToObject(rt);
+                            }
                         }
                     }
                 }
+                catch
+                {
+                    throw new Exception(string.Format("mmf {0} does not exists.", fileName));
+                }
+            });
 
-                return res;
-            }
-            catch (System.IO.FileNotFoundException ex)
+            t.Start();
+
+            if (!t.Join(TimeSpan.FromSeconds(30)))
             {
-                throw ex;
+                t.Abort();
+                throw new Exception(string.Format("Deadlock occured on mmf {0}", fileName));
             }
+
+            return res;
         }
     }
 }
