@@ -5,11 +5,26 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using Newtonsoft.Json;
 
 namespace Tools
 {
     public static class SerializationUtil
     {
+        public static byte[] SerializeJson(object obj)
+        {
+            string str = JsonConvert.SerializeObject(obj);
+            byte[] res = Encoding.UTF8.GetBytes(str);
+            return res;
+        }
+
+        public static object DeserializeJson(byte[] byteData, Type tp)
+        {
+            string str = Encoding.UTF8.GetString(byteData);
+            object obj = JsonConvert.DeserializeObject(str, tp);
+            return obj;
+        }
+
         public static byte[] SerializeToByte(object obj)
         {
             if (!CheckSerializable(obj))

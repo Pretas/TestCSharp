@@ -9,8 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Generics", "Generics\Generi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventTest", "EventTest\EventTest.csproj", "{2986D3AB-D5AE-438F-9E6F-03FD66A9B600}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsFormsApplication1", "WindowsFormsApplication1\WindowsFormsApplication1.csproj", "{12CC5890-0979-474C-AA4C-5B6AAC9C1718}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleTest", "ConsoleTest\ConsoleTest.csproj", "{A2D72DC5-A3AF-47FA-8806-EF94BE587293}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LayerLabeling", "LayerLabeling\LayerLabeling.csproj", "{4B280D34-2E53-4092-BBFB-7D1750E2F8C0}"
@@ -22,6 +20,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MemoryMappedFileTest", "MemoryMappedFileTest\MemoryMappedFileTest.csproj", "{7F57F7F8-A5BB-47D5-9333-62F12FB8544B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tools", "Tools\Tools.csproj", "{F652478D-DD48-4740-9B67-B4606E49DF03}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MongoDBDemo", "MongoDBDemo\MongoDBDemo.csproj", "{D14822FA-3EED-4317-8AAB-1420B5211779}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,10 +41,6 @@ Global
 		{2986D3AB-D5AE-438F-9E6F-03FD66A9B600}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2986D3AB-D5AE-438F-9E6F-03FD66A9B600}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2986D3AB-D5AE-438F-9E6F-03FD66A9B600}.Release|Any CPU.Build.0 = Release|Any CPU
-		{12CC5890-0979-474C-AA4C-5B6AAC9C1718}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{12CC5890-0979-474C-AA4C-5B6AAC9C1718}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{12CC5890-0979-474C-AA4C-5B6AAC9C1718}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{12CC5890-0979-474C-AA4C-5B6AAC9C1718}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A2D72DC5-A3AF-47FA-8806-EF94BE587293}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A2D72DC5-A3AF-47FA-8806-EF94BE587293}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A2D72DC5-A3AF-47FA-8806-EF94BE587293}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -69,6 +65,10 @@ Global
 		{F652478D-DD48-4740-9B67-B4606E49DF03}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F652478D-DD48-4740-9B67-B4606E49DF03}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F652478D-DD48-4740-9B67-B4606E49DF03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D14822FA-3EED-4317-8AAB-1420B5211779}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D14822FA-3EED-4317-8AAB-1420B5211779}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D14822FA-3EED-4317-8AAB-1420B5211779}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D14822FA-3EED-4317-8AAB-1420B5211779}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

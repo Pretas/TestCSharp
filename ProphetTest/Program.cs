@@ -10,6 +10,8 @@ namespace ProphetTest
     {
         static void Main(string[] args)
         {
+            
+
             ProphetLiab pl = new ProphetLiab();
             pl.DoProjectionProd00001(10);
             pl.DoProjectionProd00002(10);
