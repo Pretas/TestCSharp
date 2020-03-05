@@ -68,14 +68,15 @@ namespace PlateauOutputTest
 
     public class Policy
     {
-        string contNo;
-        double a;
-        double b;
+        public string contNo;
+        public double a;
+        public double b;
+        public string SubGroup;
     }
 
     public class ScenarioManager
     {
-        string contNo;
+        public int ScenNo;
         double a;
         double b;
     }

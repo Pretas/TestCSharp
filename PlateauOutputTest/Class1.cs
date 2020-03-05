@@ -54,15 +54,46 @@ namespace PlateauOutputTest
             Member2 = "0";
             Member3 = 0.0;
         }
-
-        //public void SetTableName(string tn)
-        //{
-        //    _tableName = tn;
-        //}
     }
 
     public enum GroupingType
     { BySG = 0, ByScen = 1, BySGByScen = 2, ByPol = 3, ByMth = 4}
+
+
+    public interface IMonthlyValues
+    {
+        void SetValues(IModel model, Policy p, ScenarioManager sm);
+        string GetValues();
+    }
+
+    public class MonthlyValues1 : IMonthlyValues
+    {
+        int V1;
+        string V2;
+        double V3;
+        double[] NavBegin;
+        double[] NavEnd;
+
+        public void SetValues(IModel model, Policy p, ScenarioManager sm)
+        {
+            if (model is Model1)
+            {
+                Model1 md = model as Model1;
+
+                V1 = md.member1;
+                V2 = md.member2;
+                V3 = md.member3;
+
+                NavBegin = new double[10];
+                NavEnd = new double[10];
+            }
+        }
+
+        public string GetValues()
+        {
+            return string.Format(@"{0},{1},{2}", V1, V2, V3);
+        }
+    }
 
     //public class GroupingDataLayout
     //{
@@ -98,10 +129,20 @@ namespace PlateauOutputTest
 
         Dictionary<string, int> SgToNo;
 
-        public void Init(ICFTable cfT, List<string> sgList = null)
+        Type MVType;
+        List<IMonthlyValues> monthlyValuesList;
+
+        public void Init(Type cfType, Type mvType, List<string> sgList = null)
         {
+            CFTableType = cfType;
+
+            MVType = mvType;
+
             if (GroupsBySG)
             {
+                SgToNo = new Dictionary<string, int>();
+                for (int i = 0; i < sgList.Count; i++) SgToNo.Add(sgList[i], i);
+
                 DtBySG = new ICFTable[sgList.Count];
                 for (int i = 0; i < sgList.Count; i++)
                 {
@@ -116,7 +157,6 @@ namespace PlateauOutputTest
                 {
                     DtByScen[i] = (ICFTable)Activator.CreateInstance(CFTableType);
                 }
-
             }
         }
 
@@ -136,7 +176,17 @@ namespace PlateauOutputTest
 
             if (GroupsByPol) { }
 
-            if (GroupsByMth) { }            
+            if (GroupsByMth) { }
+
+            if (ShouldGetMonthlyValues(p))
+            {
+                IMonthlyValues mv = (IMonthlyValues)Activator.CreateInstance(MVType);
+                mv.SetValues(model, p, sm);
+                monthlyValuesList.Add(mv);
+            }
         }
+
+        private bool ShouldGetMonthlyValues(Policy p)
+        { return p.contNo == "1"; }
     }
 }
