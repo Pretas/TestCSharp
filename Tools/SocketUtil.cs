@@ -11,6 +11,215 @@ using System.Threading.Tasks;
 
 namespace Tools
 {
+    public partial class SendReceive
+    {
+        public static void Send<T>(Socket clientSock, T obj, SerializeType st = SerializeType.Binary)
+        {
+            // Serialize Type 보내기
+            send(clientSock, SerializationUtil.Serialize((int)st, SerializeType.Binary));
+
+            // 데이터 보내기
+            byte[] dataByte = SerializationUtil.Serialize(obj, st);            
+            send(clientSock, dataByte);
+        }
+
+        public static T Receive<T>(Socket clientSock)
+        {
+            // Serialize Type 받음
+            SerializeType st = (SerializeType)SerializationUtil.Deserialize(Receive(clientSock), typeof(SerializeType), SerializeType.Binary);
+
+            // 전송데이터 받음
+            byte[] dataByte = Receive(clientSock);
+
+            if (dataByte != null)
+            {
+                return (T)SerializationUtil.Deserialize(dataByte, typeof(T), st);
+            }
+            else
+            {
+                throw new Exception("null data was transferred.");
+            }
+        }
+
+        public static void SendByBuffer<T>(Socket clientSock, int byteCntBySending, T obj, SerializeType st = SerializeType.Binary)
+        {
+            // Serialize Type 보내기
+            send(clientSock, SerializationUtil.Serialize((int)st, SerializeType.Binary));
+
+            // serialize object
+            byte[] dataByte = SerializationUtil.Serialize(obj, st);
+
+            // send memory length
+            send(clientSock, SerializationUtil.Serialize((long)dataByte.Length, SerializeType.Binary));
+
+            // count the number of sending
+            int bunchCnt = dataByte.Length / byteCntBySending + (dataByte.Length % byteCntBySending > 1 ? 1 : 0);
+
+            // send the number of sending
+            send(clientSock, SerializationUtil.Serialize(bunchCnt, SerializeType.Binary));
+
+            int now = 0;
+
+            // loop for sending N times
+            for (int i = 0; i < bunchCnt; i++)
+            {
+                // count the number of byte in one sending
+                int byteCnt = Math.Min(byteCntBySending, dataByte.Length - now);
+
+                // copy part of memory to send
+                byte[] sub = new byte[byteCnt];
+                Array.Copy(dataByte, now, sub, 0, byteCnt);
+                now += byteCnt;
+
+                // send
+                send(clientSock, sub);
+            }
+        }
+        
+        public static T ReceiveByBuffer<T>(Socket clientSock)
+        {
+            // Serialize Type 받음
+            SerializeType st = (SerializeType)SerializationUtil.Deserialize(Receive(clientSock), typeof(SerializeType), SerializeType.Binary);
+            
+            // 데이터 길이 받음
+            long byteCnt = (long)SerializationUtil.Deserialize(Receive(clientSock), typeof(long), SerializeType.Binary);
+
+            // 묶음 개수 받음
+            int bunchCnt = (int)SerializationUtil.Deserialize(Receive(clientSock), typeof(int), SerializeType.Binary);
+            
+            List<byte> total = new List<byte>();
+
+            for (int i = 0; i < bunchCnt; i++)
+            {
+                byte[] received = Receive(clientSock);
+                total.AddRange(received.ToList());
+            }
+
+            return (T)SerializationUtil.Deserialize(total.ToArray(), typeof(T), st);
+        } 
+
+    }
+
+    // 데이터 형식에 관계없이 통신하는 함수들
+    public partial class SendReceive
+    {
+        protected static void send(Socket clientSock, byte[] data)
+        {
+            // 객체의 바이트수 계산, null이거나 바이트가 0이면 실데이터는 전송하지 않음
+            int dl = 0;
+            if (data != null || data.Length == 0) dl = data.Length;
+
+            // 객체의 바이트수 전송
+            byte[] dlb = BitConverter.GetBytes(dl);
+            clientSock.Send(dlb);
+
+            // 객체의 바이트수 답변 받음
+            byte[] lb1 = GetBytesFromStream(clientSock, 4);
+
+            // 객체의 바이트수가 잘 전달되었는지 체크
+            bool isRightLength = true;
+            for (int i = 0; i < 4; i++)
+            {
+                if (dlb[i] != lb1[i]) isRightLength = false;
+            }
+
+            // 잘 전달되었는지 아닌지 전송, 잘못 전송되었다면 예외처리
+            if (isRightLength == true)
+            {
+                clientSock.Send(Encoding.UTF8.GetBytes(@"!#%&("));
+            }
+            else
+            {
+                clientSock.Send(Encoding.UTF8.GetBytes(@"@$^*)"));
+                throw new Exception(@"incorrect message length sended");
+            }
+
+            // 바이트수가 0 이상이어야 실데이터가 있으므로 전송
+            if (dl > 0)
+            {
+                //메모리전송
+                clientSock.Send(data);
+            }
+        }
+
+        public static byte[] Receive(Socket clientSock)
+        {
+            // 객체의 바이트수 수신
+            byte[] dlb = GetBytesFromStream(clientSock, 4);
+
+            // 객체 바이트수 발신(echo)
+            clientSock.Send(dlb);
+
+            // 올바른 바이트수였는지 여부 수신
+            // : "!#%&(" 이면 OK, "@$^*)"이면 에러
+            byte[] respond = GetBytesFromStream(clientSock, 5);
+
+            // 데이터 길이가 맞는지 다시 확인받음
+            string respondStr = Encoding.UTF8.GetString(respond);
+            if (respondStr == @"@$^*)") throw new Exception(@"incorrect message length received");
+
+            int lth = BitConverter.ToInt32(dlb, 0);
+            if (lth > 0)
+            {
+                byte[] dataReceived = GetBytesFromStream(clientSock, lth);
+                return dataReceived;
+            }
+            else return null;
+        }
+        
+        private static byte[] GetBytesFromStream(Socket sock, int lth)
+        {
+            byte[] dataBytes = new byte[lth];
+            int countReceived = sock.Receive(dataBytes);
+            if (countReceived < lth)
+            {
+                int lthNested = lth - countReceived;
+                byte[] dataBytesNested = GetBytesFromStream(sock, lthNested);
+                for (int i = 0; i < lthNested; i++) dataBytes[countReceived + i] = dataBytesNested[i];
+            }
+
+            return dataBytes;
+        }
+    }
+
+    public class ServerWithMultiClients
+    {
+        public Socket ServerSocket { get; private set; }
+        public List<Socket> ClientSockets { get; private set; }
+        int Port { get; set; }
+        byte[] Buffer { get; set; }
+
+        public void SetupServer(int clientsCnt)
+        {
+            ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            IPHostEntry ipEntry = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress[] addr = ipEntry.AddressList;
+
+            IPEndPoint ep = new IPEndPoint(addr[1], 100);
+            ServerSocket.Bind(ep);
+            ServerSocket.Listen(100);
+
+            ClientSockets = new List<Socket>();
+
+            for (int i = 0; i < clientsCnt; i++)
+            {
+                var cSocket = ServerSocket.Accept();
+                ClientSockets.Add(cSocket);
+                Console.WriteLine("client no. " + i + " was accepted.");
+            }
+        }
+
+        public void CloseAllSockets()
+        {
+            foreach (var sock in ClientSockets)
+            {
+                sock.Shutdown(SocketShutdown.Both);
+                sock.Close();
+            }
+        }
+    }
+    
     public class SocketNetworkingTools
     {
         public static void SendOnFileStreamOld(Socket toSocket, string fileName)
@@ -75,193 +284,6 @@ namespace Tools
             byte[] data = new byte[dataLength];
             fromSocket.Receive(data);
             w.Write(data, 0, dataLength);
-        }
-    }
-
-    public class SendReceive
-    {
-        public static void Send<T>(Socket clientSock, T obj)
-        {
-            byte[] dataByte = SerializationUtil.SerializeToByte(obj);
-            send(clientSock, dataByte);
-        }
-
-        public static void SendByBuffer<T>(Socket clientSock, int byteCntBySending, T obj)
-        {
-            // serialize object
-            byte[] dataByte = SerializationUtil.SerializeToByte(obj);
-
-            // send memory length
-            send(clientSock, SerializationUtil.SerializeToByte((long)dataByte.Length));
-
-            // count the number of sending
-            int bunchCnt = dataByte.Length / byteCntBySending + (dataByte.Length % byteCntBySending > 1 ? 1 : 0);
-
-            // send the number of sending
-            send(clientSock, SerializationUtil.SerializeToByte(bunchCnt));
-
-            int now = 0;
-
-            // loop for sending N times
-            for (int i = 0; i < bunchCnt; i++)
-            {
-                // count the number of byte in one sending
-                int byteCnt = Math.Min(byteCntBySending, dataByte.Length - now);
-
-                // copy part of memory to send
-                byte[] sub = new byte[byteCnt];
-                Array.Copy(dataByte, now, sub, 0, byteCnt);
-                now += byteCnt;
-
-                // send
-                send(clientSock, sub);
-            }
-        }
-
-        protected static void send(Socket clientSock, byte[] data)
-        {
-            // 객체의 바이트수 계산, null이거나 바이트가 0이면 실데이터는 전송하지 않음
-            int dl = 0;
-            if (data != null || data.Length == 0) dl = data.Length;
-
-            // 객체의 바이트수 전송
-            byte[] dlb = BitConverter.GetBytes(dl);
-            clientSock.Send(dlb);
-
-            // 객체의 바이트수 답변 받음
-            byte[] lb1 = GetBytesFromStream(clientSock, 4);
-
-            // 객체의 바이트수가 잘 전달되었는지 체크
-            bool isRightLength = true;
-            for (int i = 0; i < 4; i++)
-            {
-                if (dlb[i] != lb1[i]) isRightLength = false;
-            }
-
-            // 잘 전달되었는지 아닌지 전송, 잘못 전송되었다면 예외처리
-            if (isRightLength == true)
-            {
-                clientSock.Send(Encoding.UTF8.GetBytes(@"!#%&("));
-            }
-            else
-            {
-                clientSock.Send(Encoding.UTF8.GetBytes(@"@$^*)"));
-                throw new Exception(@"incorrect message length sended");
-            }
-
-            // 바이트수가 0 이상이어야 실데이터가 있으므로 전송
-            if (dl > 0)
-            {
-                //메모리전송
-                clientSock.Send(data);
-            }
-        }
-
-        public static T Receive<T>(Socket clientSock)
-        {
-            byte[] dataByte = Receive(clientSock);
-
-            if (dataByte != null)
-            {
-                return (T)SerializationUtil.DeserializeToObject(dataByte);
-            }
-            else
-            {
-                throw new Exception("null data was transferred.");
-            }
-        }
-
-        public static T ReceiveByBuffer<T>(Socket clientSock)
-        {
-            long byteCnt = Receive<long>(clientSock);
-            int bunchCnt = Receive<int>(clientSock);
-
-            List<byte> total = new List<byte>();
-
-            for (int i = 0; i < bunchCnt; i++)
-            {
-                byte[] received = Receive(clientSock);
-                total.AddRange(received.ToList());
-            }
-
-            return (T)SerializationUtil.DeserializeToObject(total.ToArray());
-        }
-        
-        public static byte[] Receive(Socket clientSock)
-        {
-            // 객체의 바이트수 수신
-            byte[] dlb = GetBytesFromStream(clientSock, 4);
-
-            // 객체 바이트수 발신(echo)
-            clientSock.Send(dlb);
-
-            // 올바른 바이트수였는지 여부 수신
-            // : "!#%&(" 이면 OK, "@$^*)"이면 에러
-            byte[] respond = GetBytesFromStream(clientSock, 5);
-
-            // 데이터 길이가 맞는지 다시 확인받음
-            string respondStr = Encoding.UTF8.GetString(respond);
-            if (respondStr == @"@$^*)") throw new Exception(@"incorrect message length received");
-
-            int lth = BitConverter.ToInt32(dlb, 0);
-            if (lth > 0)
-            {
-                byte[] dataReceived = GetBytesFromStream(clientSock, lth);
-                return dataReceived;
-            }
-            else return null;
-        }
-
-        private static byte[] GetBytesFromStream(Socket sock, int lth)
-        {
-            byte[] dataBytes = new byte[lth];
-            int countReceived = sock.Receive(dataBytes);
-            if (countReceived < lth)
-            {
-                int lthNested = lth - countReceived;
-                byte[] dataBytesNested = GetBytesFromStream(sock, lthNested);
-                for (int i = 0; i < lthNested; i++) dataBytes[countReceived + i] = dataBytesNested[i];
-            }
-
-            return dataBytes;
-        }
-    }
-
-    public class ServerWithMultiClients
-    {
-        public Socket ServerSocket { get; private set; }
-        public List<Socket> ClientSockets { get; private set; }
-        int Port { get; set; }
-        byte[] Buffer { get; set; }
-
-        public void SetupServer(int clientsCnt)
-        {
-            ServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-            IPHostEntry ipEntry = Dns.GetHostEntry(Dns.GetHostName());
-            IPAddress[] addr = ipEntry.AddressList;
-
-            IPEndPoint ep = new IPEndPoint(addr[1], 100);
-            ServerSocket.Bind(ep);
-            ServerSocket.Listen(100);
-
-            ClientSockets = new List<Socket>();
-
-            for (int i = 0; i < clientsCnt; i++)
-            {
-                var cSocket = ServerSocket.Accept();
-                ClientSockets.Add(cSocket);
-                Console.WriteLine("client no. " + i + " was accepted.");
-            }
-        }
-
-        public void CloseAllSockets()
-        {
-            foreach (var sock in ClientSockets)
-            {
-                sock.Shutdown(SocketShutdown.Both);
-                sock.Close();
-            }
         }
     }
 

@@ -9,8 +9,22 @@ using Newtonsoft.Json;
 
 namespace Tools
 {
+    public enum SerializeType { Binary = 0, Json = 1 }
+
     public static class SerializationUtil
     {
+        public static byte[] Serialize(object obj, SerializeType t)
+        {
+            if (t == SerializeType.Binary) return SerializeBinary(obj);
+            else return SerializeJson(obj);
+        }
+
+        public static object Deserialize(byte[] byteData, Type tp, SerializeType t)
+        {
+            if (t == SerializeType.Binary) return DeserializeBinary(byteData);
+            else return SerializeJson(byteData);
+        }
+
         public static byte[] SerializeJson(object obj)
         {
             string str = JsonConvert.SerializeObject(obj);
@@ -25,7 +39,7 @@ namespace Tools
             return obj;
         }
 
-        public static byte[] SerializeToByte(object obj)
+        public static byte[] SerializeBinary(object obj)
         {
             if (!CheckSerializable(obj))
             { return null; }
@@ -37,7 +51,7 @@ namespace Tools
             return stream.ToArray();
         }
 
-        public static object DeserializeToObject(byte[] byteData)
+        public static object DeserializeBinary(byte[] byteData)
         {
             MemoryStream stream = new MemoryStream();
             stream.SetLength(byteData.Length + Int64.Parse(Math.Pow(2, 20).ToString()));

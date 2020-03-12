@@ -10,6 +10,126 @@ using System.Threading.Tasks;
 
 namespace Tools
 {
+    public class MMFManager
+    {
+        public string FileName { get; private set; }
+        public MemoryMappedFile Memory { get; private set; }
+        public SerializeType SType { get; set; }
+
+        private object DT { get; set; }
+        public Type DataType { get; private set; }
+
+        public MMFManager(string fileName, Type dt)
+        {
+            FileName = fileName;
+            DataType = dt;
+        }
+
+        public void SaveMMF(object obj, SerializeType st)
+        {
+            SType = st;
+
+            bool exists = false;
+
+            try
+            {
+                using (var item = MemoryMappedFile.OpenExisting(FileName)) { }
+
+                exists = true;
+
+                throw new Exception("There is file " + FileName + "already");
+                
+            }
+            catch (Exception e)
+            {
+                if (exists) throw e;
+
+                try
+                {
+                    byte[] byteObj = SerializationUtil.Serialize(obj, SType);
+
+                    Memory = MemoryMappedFile.CreateNew(FileName, byteObj.Length);
+
+                    int lth = byteObj.Length;
+
+                    using (var wt = Memory.CreateViewAccessor(0, lth))
+                    {
+                        int pos = 0;
+                        wt.WriteArray(pos, byteObj, 0, lth);
+                    }                    
+                }
+                catch (Exception e2)
+                {
+                    throw e2;
+                }
+            }
+        }
+        
+        public void SaveMMF(Socket sock)
+        {
+            // Serialize Type 받음
+            SType = (SerializeType)SerializationUtil.Deserialize(SendReceive.Receive(sock), typeof(SerializeType), SerializeType.Binary);
+
+            // 데이터 길이 받음
+            long byteCnt = (long)SerializationUtil.Deserialize(SendReceive.Receive(sock), typeof(long), SerializeType.Binary);
+
+            // 묶음 개수 받음
+            int bunchCnt = (int)SerializationUtil.Deserialize(SendReceive.Receive(sock), typeof(int), SerializeType.Binary);
+                        
+            // using 쓰면 안됨, isClosed = true로 바뀜
+            var mmf = MemoryMappedFile.CreateNew(FileName, byteCnt);
+
+            long position = 0;
+
+            for (int i = 0; i < bunchCnt; i++)
+            {
+                byte[] received = SendReceive.Receive(sock);
+
+                using (var wt = mmf.CreateViewAccessor(position, received.Length))
+                {
+                    int pos = 0;
+                    wt.WriteArray(pos, received, 0, received.Length);
+                    position += received.Length;
+                }
+            }
+
+            Memory = mmf;
+        }
+        
+        public void LoadMMF()
+        {
+            Thread t = new Thread(() =>
+            {
+                try
+                {
+                    using (var mmf = MemoryMappedFile.OpenExisting(FileName))
+                    {
+                        using (var stream = mmf.CreateViewStream())
+                        {
+                            using (BinaryReader br = new BinaryReader(stream))
+                            {
+                                byte[] rt = br.ReadBytes((int)stream.Length);
+                                DT = SerializationUtil.Deserialize(rt, DataType, SType);
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    throw new Exception(string.Format("mmf {0} does not exists.", FileName));
+                }
+            });
+
+            t.Start();
+
+            if (!t.Join(TimeSpan.FromSeconds(30)))
+            {
+                t.Abort();
+                throw new Exception(string.Format("Deadlock occured on mmf {0}", FileName));
+            }
+        }
+    }
+
     public class MemoryMappedFileUtil
     {
         public static MemoryMappedFile SaveMMF<T>(T obj, string fileName, bool isReuse)
@@ -35,7 +155,7 @@ namespace Tools
                 
                 try
                 {
-                    byte[] byteObj = SerializationUtil.SerializeToByte(obj);
+                    byte[] byteObj = SerializationUtil.SerializeBinary(obj);
 
                     mmf = MemoryMappedFile.CreateNew(fileName, byteObj.Length);
 
@@ -96,7 +216,7 @@ namespace Tools
                             using (BinaryReader br = new BinaryReader(stream))
                             {
                                 byte[] rt = br.ReadBytes((int)stream.Length);
-                                res = (T)SerializationUtil.DeserializeToObject(rt);
+                                res = (T)SerializationUtil.DeserializeBinary(rt);
                             }
                         }
                     }
