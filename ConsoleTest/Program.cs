@@ -16,9 +16,10 @@ namespace ConsoleTest
     {
         static void Main(string[] args)
         {
-            SerializationTest.TestSerializationJson();
+            TestMMF.ConsoleMMF();
+            //SerializationTest.TestSerializationJson();
 
-            Tools.MongoDBTest.Test();
+            //Tools.MongoDBTest.Test();
 
             //Tools.TestClass.DisconnectionTest();
             //Tools.TestClass.TCPTestBuffers();

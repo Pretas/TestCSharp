@@ -16,7 +16,7 @@ namespace Tools
         public static void Send<T>(Socket clientSock, T obj, SerializeType st = SerializeType.Binary)
         {
             // Serialize Type 보내기
-            send(clientSock, SerializationUtil.Serialize((int)st, SerializeType.Binary));
+            send(clientSock, SerializationUtil.Serialize((int)st));
 
             // 데이터 보내기
             byte[] dataByte = SerializationUtil.Serialize(obj, st);            
@@ -26,7 +26,7 @@ namespace Tools
         public static T Receive<T>(Socket clientSock)
         {
             // Serialize Type 받음
-            SerializeType st = (SerializeType)SerializationUtil.Deserialize(Receive(clientSock), typeof(SerializeType), SerializeType.Binary);
+            SerializeType st = (SerializeType)SerializationUtil.Deserialize(Receive(clientSock), typeof(SerializeType));
 
             // 전송데이터 받음
             byte[] dataByte = Receive(clientSock);
@@ -44,19 +44,19 @@ namespace Tools
         public static void SendByBuffer<T>(Socket clientSock, int byteCntBySending, T obj, SerializeType st = SerializeType.Binary)
         {
             // Serialize Type 보내기
-            send(clientSock, SerializationUtil.Serialize((int)st, SerializeType.Binary));
+            send(clientSock, SerializationUtil.Serialize((int)st));
 
             // serialize object
             byte[] dataByte = SerializationUtil.Serialize(obj, st);
 
             // send memory length
-            send(clientSock, SerializationUtil.Serialize((long)dataByte.Length, SerializeType.Binary));
+            send(clientSock, SerializationUtil.Serialize((long)dataByte.Length));
 
             // count the number of sending
             int bunchCnt = dataByte.Length / byteCntBySending + (dataByte.Length % byteCntBySending > 1 ? 1 : 0);
 
             // send the number of sending
-            send(clientSock, SerializationUtil.Serialize(bunchCnt, SerializeType.Binary));
+            send(clientSock, SerializationUtil.Serialize(bunchCnt));
 
             int now = 0;
 
@@ -79,13 +79,13 @@ namespace Tools
         public static T ReceiveByBuffer<T>(Socket clientSock)
         {
             // Serialize Type 받음
-            SerializeType st = (SerializeType)SerializationUtil.Deserialize(Receive(clientSock), typeof(SerializeType), SerializeType.Binary);
+            SerializeType st = (SerializeType)SerializationUtil.Deserialize(Receive(clientSock), typeof(SerializeType));
             
             // 데이터 길이 받음
-            long byteCnt = (long)SerializationUtil.Deserialize(Receive(clientSock), typeof(long), SerializeType.Binary);
+            long byteCnt = (long)SerializationUtil.Deserialize(Receive(clientSock), typeof(long));
 
             // 묶음 개수 받음
-            int bunchCnt = (int)SerializationUtil.Deserialize(Receive(clientSock), typeof(int), SerializeType.Binary);
+            int bunchCnt = (int)SerializationUtil.Deserialize(Receive(clientSock), typeof(int));
             
             List<byte> total = new List<byte>();
 
@@ -96,8 +96,7 @@ namespace Tools
             }
 
             return (T)SerializationUtil.Deserialize(total.ToArray(), typeof(T), st);
-        } 
-
+        }
     }
 
     // 데이터 형식에 관계없이 통신하는 함수들

@@ -13,13 +13,13 @@ namespace Tools
 
     public static class SerializationUtil
     {
-        public static byte[] Serialize(object obj, SerializeType t)
+        public static byte[] Serialize(object obj, SerializeType t = SerializeType.Binary)
         {
             if (t == SerializeType.Binary) return SerializeBinary(obj);
             else return SerializeJson(obj);
         }
 
-        public static object Deserialize(byte[] byteData, Type tp, SerializeType t)
+        public static object Deserialize(byte[] byteData, Type tp, SerializeType t = SerializeType.Binary)
         {
             if (t == SerializeType.Binary) return DeserializeBinary(byteData);
             else return SerializeJson(byteData);

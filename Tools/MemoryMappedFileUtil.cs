@@ -15,69 +15,61 @@ namespace Tools
         public string FileName { get; private set; }
         public MemoryMappedFile Memory { get; private set; }
         public SerializeType SType { get; set; }
-
-        private object DT { get; set; }
         public Type DataType { get; private set; }
 
-        public MMFManager(string fileName, Type dt)
+        public MMFManager(string fileName, Type dt, object obj, SerializeType st)
         {
             FileName = fileName;
             DataType = dt;
+
+            SaveMMF(obj, st);
+        }
+
+        public MMFManager(string fileName, Type dt, Socket sock)
+        {
+            FileName = fileName;
+            DataType = dt;
+
+            SaveMMF(sock);
         }
 
         public void SaveMMF(object obj, SerializeType st)
         {
             SType = st;
-
-            bool exists = false;
-
+            
             try
             {
-                using (var item = MemoryMappedFile.OpenExisting(FileName)) { }
+                byte[] byteObj = SerializationUtil.Serialize(obj, SType);
 
-                exists = true;
+                Memory = MemoryMappedFile.CreateNew(FileName, byteObj.Length);
 
-                throw new Exception("There is file " + FileName + "already");
-                
+                int lth = byteObj.Length;
+
+                using (var wt = Memory.CreateViewAccessor(0, lth))
+                {
+                    int pos = 0;
+                    wt.WriteArray(pos, byteObj, 0, lth);
+                }
             }
             catch (Exception e)
             {
-                if (exists) throw e;
-
-                try
-                {
-                    byte[] byteObj = SerializationUtil.Serialize(obj, SType);
-
-                    Memory = MemoryMappedFile.CreateNew(FileName, byteObj.Length);
-
-                    int lth = byteObj.Length;
-
-                    using (var wt = Memory.CreateViewAccessor(0, lth))
-                    {
-                        int pos = 0;
-                        wt.WriteArray(pos, byteObj, 0, lth);
-                    }                    
-                }
-                catch (Exception e2)
-                {
-                    throw e2;
-                }
+                throw new Exception(string.Format("mmf {0} exists already.", FileName));
             }
         }
         
         public void SaveMMF(Socket sock)
         {
             // Serialize Type 받음
-            SType = (SerializeType)SerializationUtil.Deserialize(SendReceive.Receive(sock), typeof(SerializeType), SerializeType.Binary);
+            SType = (SerializeType)SerializationUtil.Deserialize(SendReceive.Receive(sock), typeof(SerializeType));
 
             // 데이터 길이 받음
-            long byteCnt = (long)SerializationUtil.Deserialize(SendReceive.Receive(sock), typeof(long), SerializeType.Binary);
+            long byteCnt = (long)SerializationUtil.Deserialize(SendReceive.Receive(sock), typeof(long));
 
             // 묶음 개수 받음
-            int bunchCnt = (int)SerializationUtil.Deserialize(SendReceive.Receive(sock), typeof(int), SerializeType.Binary);
-                        
+            int bunchCnt = (int)SerializationUtil.Deserialize(SendReceive.Receive(sock), typeof(int));
+
             // using 쓰면 안됨, isClosed = true로 바뀜
-            var mmf = MemoryMappedFile.CreateNew(FileName, byteCnt);
+            Memory = MemoryMappedFile.CreateNew(FileName, byteCnt);
 
             long position = 0;
 
@@ -85,19 +77,21 @@ namespace Tools
             {
                 byte[] received = SendReceive.Receive(sock);
 
-                using (var wt = mmf.CreateViewAccessor(position, received.Length))
+                using (var wt = Memory.CreateViewAccessor(position, received.Length))
                 {
                     int pos = 0;
                     wt.WriteArray(pos, received, 0, received.Length);
                     position += received.Length;
                 }
             }
-
-            Memory = mmf;
         }
         
-        public void LoadMMF()
+        public object LoadMMF()
         {
+            if (FileName == null) throw new Exception("Loading unavailable MMF is failed.");
+
+            object res = null;
+
             Thread t = new Thread(() =>
             {
                 try
@@ -109,7 +103,7 @@ namespace Tools
                             using (BinaryReader br = new BinaryReader(stream))
                             {
                                 byte[] rt = br.ReadBytes((int)stream.Length);
-                                DT = SerializationUtil.Deserialize(rt, DataType, SType);
+                                res = SerializationUtil.Deserialize(rt, DataType, SType);
                             }
                         }
                     }
@@ -127,7 +121,22 @@ namespace Tools
                 t.Abort();
                 throw new Exception(string.Format("Deadlock occured on mmf {0}", FileName));
             }
+
+            return res;
         }
+
+        public static bool Exists(string fileName)
+        {
+            try
+            {
+                using (var mmf = MemoryMappedFile.OpenExisting(fileName)) { }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }            
+        }        
     }
 
     public class MemoryMappedFileUtil
